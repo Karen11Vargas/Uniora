@@ -10,18 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Building2, LayoutDashboard, FolderKanban, DollarSign, Settings, LogOut, FileText, Vote, Users } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
+import { api, UserType } from './services/api';
 
-type UserType = 'admin' | 'owner' | 'committee' | null;
 type AppView = 'home' | 'login' | 'register-community' | 'dashboard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
-  const [userType, setUserType] = useState<UserType>(null);
+  const [userType, setUserType] = useState<UserType | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [notifications, setNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [language, setLanguage] = useState('es');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Aplicar tema
   useEffect(() => {
@@ -42,9 +43,17 @@ export default function App() {
     }
   }, [theme]);
 
-  const handleLogin = (type: UserType) => {
-    setUserType(type);
-    setCurrentView('dashboard');
+  const handleLogin = async ({ email, password, userType: selectedType }: { email: string; password: string; userType: UserType }) => {
+    try {
+      setIsAuthenticating(true);
+      const session = await api.login({ email, password, userType: selectedType });
+      setUserType(session.userType);
+      setCurrentView('dashboard');
+    } catch (error: any) {
+      alert(error.message || 'No se pudo iniciar sesión');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const handleLogout = () => {
@@ -72,6 +81,7 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
+        loading={isAuthenticating}
         onBack={() => setCurrentView('home')}
       />
     );

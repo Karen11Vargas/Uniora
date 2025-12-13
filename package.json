@@ -32,8 +32,10 @@
           "@radix-ui/react-tooltip": "^1.1.8",
           "class-variance-authority": "^0.7.1",
           "clsx": "*",
+          "cors": "^2.8.5",
           "cmdk": "^1.1.1",
           "embla-carousel-react": "^8.6.0",
+          "express": "^4.21.1",
           "input-otp": "^1.4.2",
           "lucide-react": "^0.487.0",
           "next-themes": "^0.4.6",
@@ -45,6 +47,7 @@
           "recharts": "^2.15.2",
           "sonner": "^2.0.3",
           "tailwind-merge": "*",
+          "uuid": "^11.0.3",
           "vaul": "^1.1.2"
       },
       "devDependencies": {
@@ -54,6 +57,7 @@
       },
       "scripts": {
           "dev": "vite",
-          "build": "vite build"
+          "build": "vite build",
+          "server": "node server/index.js"
       }
   }
