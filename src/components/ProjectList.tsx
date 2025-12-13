@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -16,123 +16,73 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-
-interface Task {
-  id: number;
-  title: string;
-  completed: boolean;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  description: string;
-  status: 'pendiente' | 'en-progreso' | 'completado' | 'retrasado';
-  priority: 'baja' | 'media' | 'alta';
-  startDate: string;
-  endDate: string;
-  budget: number;
-  spent: number;
-  team: string[];
-  tasks: Task[];
-}
-
-const initialProjects: Project[] = [
-  {
-    id: 1,
-    name: 'Rediseño Web Corporativo',
-    description: 'Actualización completa del sitio web corporativo con nuevo diseño responsive',
-    status: 'en-progreso',
-    priority: 'alta',
-    startDate: '2025-01-15',
-    endDate: '2025-03-30',
-    budget: 15000,
-    spent: 9750,
-    team: ['Ana García', 'Carlos López', 'María Fernández'],
-    tasks: [
-      { id: 1, title: 'Diseño UI/UX', completed: true },
-      { id: 2, title: 'Desarrollo Frontend', completed: true },
-      { id: 3, title: 'Desarrollo Backend', completed: false },
-      { id: 4, title: 'Testing y QA', completed: false }
-    ]
-  },
-  {
-    id: 2,
-    name: 'App Móvil E-commerce',
-    description: 'Desarrollo de aplicación móvil para plataforma de ventas',
-    status: 'en-progreso',
-    priority: 'alta',
-    startDate: '2025-02-01',
-    endDate: '2025-05-15',
-    budget: 25000,
-    spent: 10000,
-    team: ['Pedro Martínez', 'Laura Ruiz'],
-    tasks: [
-      { id: 1, title: 'Prototipo', completed: true },
-      { id: 2, title: 'Desarrollo iOS', completed: false },
-      { id: 3, title: 'Desarrollo Android', completed: false },
-      { id: 4, title: 'Integración APIs', completed: false }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Sistema CRM',
-    description: 'Implementación de sistema de gestión de relaciones con clientes',
-    status: 'retrasado',
-    priority: 'media',
-    startDate: '2024-12-01',
-    endDate: '2025-02-28',
-    budget: 18000,
-    spent: 12000,
-    team: ['José Torres', 'Carmen Silva'],
-    tasks: [
-      { id: 1, title: 'Análisis de requisitos', completed: true },
-      { id: 2, title: 'Configuración base', completed: true },
-      { id: 3, title: 'Personalización', completed: false },
-      { id: 4, title: 'Migración de datos', completed: false }
-    ]
-  },
-  {
-    id: 4,
-    name: 'Campaña Marketing Digital',
-    description: 'Campaña de marketing en redes sociales y Google Ads',
-    status: 'completado',
-    priority: 'media',
-    startDate: '2024-11-01',
-    endDate: '2025-01-31',
-    budget: 8000,
-    spent: 7500,
-    team: ['Sandra Morales'],
-    tasks: [
-      { id: 1, title: 'Estrategia de contenido', completed: true },
-      { id: 2, title: 'Diseño de creatividades', completed: true },
-      { id: 3, title: 'Ejecución de campaña', completed: true },
-      { id: 4, title: 'Análisis de resultados', completed: true }
-    ]
-  }
-];
+import { api, Project } from '../services/api';
 
 export function ProjectList() {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'pendiente' as Project['status'],
+    priority: 'media' as Project['priority'],
+    startDate: '',
+    endDate: '',
+    budget: '',
+    team: ''
+  });
 
-  const toggleTask = (projectId: number, taskId: number) => {
-    setProjects(projects.map(project => {
-      if (project.id === projectId) {
-        return {
-          ...project,
-          tasks: project.tasks.map(task =>
-            task.id === taskId ? { ...task, completed: !task.completed } : task
-          )
-        };
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const data = await api.getProjects();
+        setProjects(data);
+      } catch (error: any) {
+        alert(error.message || 'No pudimos cargar los proyectos');
+      } finally {
+        setLoading(false);
       }
-      return project;
-    }));
+    }
+
+    loadProjects();
+  }, []);
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCreateProject = async () => {
+    try {
+      const payload = {
+        ...formData,
+        budget: Number(formData.budget),
+        team: formData.team ? formData.team.split(',').map((member) => member.trim()).filter(Boolean) : [],
+        spent: 0
+      } as any;
+
+      const created = await api.createProject(payload);
+      setProjects((prev) => [created, ...prev]);
+      setDialogOpen(false);
+      setFormData({ name: '', description: '', status: 'pendiente', priority: 'media', startDate: '', endDate: '', budget: '', team: '' });
+    } catch (error: any) {
+      alert(error.message || 'No pudimos crear el proyecto');
+    }
+  };
+
+  const toggleTask = async (projectId: string, taskId: string) => {
+    try {
+      const updated = await api.toggleTask(projectId, taskId);
+      setProjects((prev) => prev.map((project) => (project.id === updated.id ? updated : project)));
+    } catch (error: any) {
+      alert(error.message || 'No pudimos actualizar la tarea');
+    }
   };
 
   const getProgress = (project: Project) => {
     const completed = project.tasks.filter(t => t.completed).length;
-    return (completed / project.tasks.length) * 100;
+    return project.tasks.length ? (completed / project.tasks.length) * 100 : 0;
   };
 
   const getStatusIcon = (status: string) => {
@@ -148,6 +98,10 @@ export function ProjectList() {
     }
   };
 
+  if (loading) {
+    return <div className="text-gray-500 dark:text-gray-300">Cargando proyectos...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -155,7 +109,7 @@ export function ProjectList() {
           <h2 className="text-gray-900 dark:text-gray-100">Gestión de Proyectos</h2>
           <p className="text-gray-500 dark:text-gray-400">Administra tus proyectos y tareas</p>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -172,16 +126,26 @@ export function ProjectList() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nombre del Proyecto</Label>
-                <Input id="name" placeholder="Ej: Nuevo sitio web" />
+                <Input
+                  id="name"
+                  placeholder="Ej: Nuevo sitio web"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" placeholder="Describe el proyecto..." />
+                <Textarea
+                  id="description"
+                  placeholder="Describe el proyecto..."
+                  value={formData.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="priority">Prioridad</Label>
-                  <Select>
+                  <Select value={formData.priority} onValueChange={(value) => handleChange('priority', value)}>
                     <SelectTrigger id="priority">
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
@@ -194,23 +158,62 @@ export function ProjectList() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="budget">Presupuesto</Label>
-                  <Input id="budget" type="number" placeholder="0" />
+                  <Input
+                    id="budget"
+                    type="number"
+                    placeholder="0"
+                    value={formData.budget}
+                    onChange={(e) => handleChange('budget', e.target.value)}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Fecha Inicio</Label>
-                  <Input id="startDate" type="date" />
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => handleChange('startDate', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">Fecha Fin</Label>
-                  <Input id="endDate" type="date" />
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => handleChange('endDate', e.target.value)}
+                  />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="team">Equipo (separa por comas)</Label>
+                <Input
+                  id="team"
+                  placeholder="Ej: Ana García, Carlos López"
+                  value={formData.team}
+                  onChange={(e) => handleChange('team', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Estado</Label>
+                <Select value={formData.status} onValueChange={(value) => handleChange('status', value)}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendiente">Pendiente</SelectItem>
+                    <SelectItem value="en-progreso">En progreso</SelectItem>
+                    <SelectItem value="completado">Completado</SelectItem>
+                    <SelectItem value="retrasado">Retrasado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline">Cancelar</Button>
-              <Button>Crear Proyecto</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleCreateProject}>Crear Proyecto</Button>
             </div>
           </DialogContent>
         </Dialog>
