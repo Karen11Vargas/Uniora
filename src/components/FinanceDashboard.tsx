@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -8,18 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Plus, TrendingUp, TrendingDown, DollarSign, CreditCard, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-
-interface Expense {
-  id: number;
-  date: string;
-  category: string;
-  project: string;
-  description: string;
-  amount: number;
-  type: 'gasto' | 'ingreso';
-}
+import { api, FinanceRecord } from '../services/api';
 
 const monthlyTrend = [
   { month: 'Ene', ingresos: 45000, gastos: 32500, beneficio: 12500 },
@@ -39,24 +30,58 @@ const categoryData = [
   { month: 'Jun', desarrollo: 18500, diseño: 11700, marketing: 9500, operaciones: 5500 }
 ];
 
-const initialExpenses: Expense[] = [
-  { id: 1, date: '2025-06-15', category: 'Desarrollo', project: 'Rediseño Web', description: 'Desarrollo Frontend', amount: 5000, type: 'gasto' },
-  { id: 2, date: '2025-06-14', category: 'Diseño', project: 'App Móvil', description: 'Diseño UI/UX', amount: 3500, type: 'gasto' },
-  { id: 3, date: '2025-06-12', category: 'Marketing', project: 'Campaña Digital', description: 'Google Ads', amount: 2000, type: 'gasto' },
-  { id: 4, date: '2025-06-10', category: 'Operaciones', project: 'General', description: 'Licencias software', amount: 800, type: 'gasto' },
-  { id: 5, date: '2025-06-08', category: 'Ingreso', project: 'Cliente A', description: 'Pago parcial proyecto', amount: 15000, type: 'ingreso' },
-  { id: 6, date: '2025-06-05', category: 'Desarrollo', project: 'Sistema CRM', description: 'Backend development', amount: 4500, type: 'gasto' },
-  { id: 7, date: '2025-06-03', category: 'Diseño', project: 'Rediseño Web', description: 'Diseño de prototipos', amount: 2800, type: 'gasto' },
-  { id: 8, date: '2025-06-01', category: 'Ingreso', project: 'Cliente B', description: 'Pago proyecto completado', amount: 25000, type: 'ingreso' }
-];
-
 export function FinanceDashboard() {
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  
+  const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newTransaction, setNewTransaction] = useState<Omit<FinanceRecord, 'id'>>({
+    amount: 0,
+    category: '',
+    date: '',
+    description: '',
+    project: 'General',
+    type: 'gasto'
+  });
+
+  useEffect(() => {
+    async function loadFinances() {
+      try {
+        const records = await api.getFinances();
+        setExpenses(records);
+      } catch (err: any) {
+        setError(err.message || 'No se pudieron cargar las finanzas');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFinances();
+  }, []);
+
   const totalIncome = expenses.filter(e => e.type === 'ingreso').reduce((sum, e) => sum + e.amount, 0);
   const totalExpenses = expenses.filter(e => e.type === 'gasto').reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalIncome - totalExpenses;
-  const profitMargin = ((netProfit / totalIncome) * 100).toFixed(1);
+  const profitMargin = totalIncome ? ((netProfit / totalIncome) * 100).toFixed(1) : '0';
+
+  const handleTransactionChange = (field: keyof Omit<FinanceRecord, 'id'>, value: string | number) => {
+    setNewTransaction((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveTransaction = async () => {
+    try {
+      const created = await api.createFinance(newTransaction);
+      setExpenses((prev) => [created, ...prev]);
+      setDialogOpen(false);
+      setNewTransaction({ amount: 0, category: '', date: '', description: '', project: 'General', type: 'gasto' });
+    } catch (err: any) {
+      alert(err.message || 'No pudimos guardar la transacción');
+    }
+  };
+
+  if (loading) {
+    return <div className="text-gray-500 dark:text-gray-300">Cargando finanzas...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +90,7 @@ export function FinanceDashboard() {
           <h2 className="text-gray-900 dark:text-gray-100">Panel Financiero</h2>
           <p className="text-gray-500 dark:text-gray-400">Monitorea ingresos, gastos y presupuestos</p>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -82,7 +107,7 @@ export function FinanceDashboard() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo</Label>
-                <Select>
+                <Select value={newTransaction.type} onValueChange={(value) => handleTransactionChange('type', value)}>
                   <SelectTrigger id="type">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
@@ -94,42 +119,70 @@ export function FinanceDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Monto</Label>
-                <Input id="amount" type="number" placeholder="0.00" />
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={newTransaction.amount}
+                  onChange={(e) => handleTransactionChange('amount', Number(e.target.value))}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Categoría</Label>
-                <Select>
+                <Select value={newTransaction.category} onValueChange={(value) => handleTransactionChange('category', value)}>
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desarrollo">Desarrollo</SelectItem>
-                    <SelectItem value="diseno">Diseño</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="operaciones">Operaciones</SelectItem>
+                    <SelectItem value="Desarrollo">Desarrollo</SelectItem>
+                    <SelectItem value="Diseño">Diseño</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Operaciones">Operaciones</SelectItem>
+                    <SelectItem value="Ingreso">Ingreso</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="project">Proyecto</Label>
-                <Input id="project" placeholder="Nombre del proyecto" />
+                <Input
+                  id="project"
+                  placeholder="Nombre del proyecto"
+                  value={newTransaction.project}
+                  onChange={(e) => handleTransactionChange('project', e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
-                <Input id="description" placeholder="Describe la transacción" />
+                <Input
+                  id="description"
+                  placeholder="Describe la transacción"
+                  value={newTransaction.description}
+                  onChange={(e) => handleTransactionChange('description', e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Fecha</Label>
-                <Input id="date" type="date" />
+                <Input
+                  id="date"
+                  type="date"
+                  value={newTransaction.date}
+                  onChange={(e) => handleTransactionChange('date', e.target.value)}
+                />
               </div>
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline">Cancelar</Button>
-              <Button>Guardar</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSaveTransaction}>Guardar</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:text-red-200 dark:border-red-800">
+          {error}
+        </div>
+      )}
 
       {/* Financial KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
