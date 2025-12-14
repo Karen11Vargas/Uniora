@@ -5,6 +5,8 @@ import { CommunityRegistrationForm } from './components/CommunityRegistrationFor
 import { ProjectDashboard } from './components/ProjectDashboard';
 import { FinanceDashboard } from './components/FinanceDashboard';
 import { ProjectList } from './components/ProjectList';
+import { UserManagement } from './components/UserManagement';
+import { VotationCenter } from './components/VotationCenter';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Building2, LayoutDashboard, FolderKanban, DollarSign, Settings, LogOut, FileText, Vote, Users } from 'lucide-react';
@@ -198,11 +200,7 @@ export default function App() {
             </TabsContent>
 
             <TabsContent value="users" className="space-y-6">
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-gray-900 dark:text-gray-100 mb-2">Gestión de Usuarios</h3>
-                <p className="text-gray-500 dark:text-gray-400">Administra propietarios y miembros del comité</p>
-              </div>
+              <UserManagement />
             </TabsContent>
           </Tabs>
         )}
@@ -264,11 +262,7 @@ export default function App() {
             </TabsContent>
 
             <TabsContent value="votations" className="space-y-6">
-              <div className="text-center py-12">
-                <Vote className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-gray-900 dark:text-gray-100 mb-2">Gestión de Votaciones</h3>
-                <p className="text-gray-500 dark:text-gray-400">Crea y gestiona votaciones formales</p>
-              </div>
+              <VotationCenter />
             </TabsContent>
 
             <TabsContent value="communications" className="space-y-6">
