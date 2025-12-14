@@ -7,6 +7,7 @@ import { FinanceDashboard } from './components/FinanceDashboard';
 import { ProjectList } from './components/ProjectList';
 import { UserManagement } from './components/UserManagement';
 import { VotationCenter } from './components/VotationCenter';
+import { RequestCenter } from './components/RequestCenter';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Building2, LayoutDashboard, FolderKanban, DollarSign, Settings, LogOut, FileText, Vote, Users } from 'lucide-react';
@@ -168,7 +169,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {userType === 'admin' && (
           <Tabs defaultValue="dashboard" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-2xl grid-cols-5">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Panel</span>
@@ -180,6 +181,10 @@ export default function App() {
               <TabsTrigger value="projects" className="flex items-center gap-2">
                 <FolderKanban className="w-4 h-4" />
                 <span>Proyectos</span>
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span>Solicitudes</span>
               </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -197,6 +202,10 @@ export default function App() {
 
             <TabsContent value="projects" className="space-y-6">
               <ProjectList />
+            </TabsContent>
+
+            <TabsContent value="requests" className="space-y-6">
+              <RequestCenter />
             </TabsContent>
 
             <TabsContent value="users" className="space-y-6">
