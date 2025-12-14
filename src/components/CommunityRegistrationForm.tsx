@@ -5,8 +5,9 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Building2, ArrowLeft, CheckCircle2, User, Mail, Phone, MapPin } from 'lucide-react';
+import { Building2, ArrowLeft, CheckCircle2, User, Mail, Phone } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
+import { api } from '../services/api';
 
 interface CommunityRegistrationFormProps {
   onBack: () => void;
@@ -35,13 +36,22 @@ export function CommunityRegistrationForm({ onBack, onSubmit }: CommunityRegistr
     currentSoftware: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) {
       setStep(step + 1);
     } else {
-      // Mostrar mensaje de éxito y redirigir
-      onSubmit();
+      try {
+        setSubmitting(true);
+        await api.registerCommunity(formData);
+        onSubmit();
+      } catch (error: any) {
+        alert(error.message || 'No pudimos registrar la comunidad');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -307,8 +317,8 @@ export function CommunityRegistrationForm({ onBack, onSubmit }: CommunityRegistr
                 Anterior
               </Button>
             )}
-            <Button type="submit" className="ml-auto">
-              {step < 3 ? 'Siguiente' : 'Enviar Solicitud'}
+            <Button type="submit" className="ml-auto" disabled={submitting}>
+              {submitting ? 'Enviando...' : step < 3 ? 'Siguiente' : 'Enviar Solicitud'}
             </Button>
           </div>
         </form>

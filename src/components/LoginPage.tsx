@@ -6,22 +6,23 @@ import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Building2, Mail, Lock, ArrowRight, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { UserType } from '../services/api';
 
 interface LoginPageProps {
-  onLogin: (userType: 'admin' | 'owner' | 'committee') => void;
+  onLogin: (payload: { email: string; password: string; userType: UserType }) => void;
+  loading?: boolean;
   onBack?: () => void;
 }
 
-export function LoginPage({ onLogin, onBack }: LoginPageProps) {
+export function LoginPage({ onLogin, onBack, loading = false }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState<'admin' | 'owner' | 'committee'>('owner');
+  const [userType, setUserType] = useState<UserType>('owner');
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simular inicio de sesión exitoso con el tipo de usuario seleccionado
-    onLogin(userType);
+    onLogin({ email, password, userType });
   };
 
   return (
@@ -123,8 +124,12 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               </button>
             </div>
 
-            <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              Iniciar sesión
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            >
+              {loading ? 'Iniciando...' : 'Iniciar sesión'}
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </form>
