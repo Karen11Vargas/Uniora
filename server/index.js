@@ -8,38 +8,10 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-let users = [
-  { id: uuidv4(), email: 'admin@uniora.com', password: 'admin123', userType: 'admin', name: 'Administradora Demo', status: 'activo', phone: '+57 300 000 0000' },
-  { id: uuidv4(), email: 'propietario@uniora.com', password: 'owner123', userType: 'owner', name: 'Propietario Demo', status: 'activo', phone: '+57 300 000 0001' },
-  { id: uuidv4(), email: 'comite@uniora.com', password: 'committee123', userType: 'committee', name: 'Miembro Comité Demo', status: 'activo', phone: '+57 300 000 0002' }
-];
-
-let votations = [
-  {
-    id: uuidv4(),
-    title: 'Cambio de portería inteligente',
-    description: 'Votación para aprobar la instalación de un sistema de ingreso biométrico',
-    status: 'abierta',
-    closesAt: '2025-07-15',
-    createdBy: 'Miembro Comité Demo',
-    options: [
-      { id: uuidv4(), label: 'A favor', votes: 12 },
-      { id: uuidv4(), label: 'En contra', votes: 3 },
-      { id: uuidv4(), label: 'Necesita más información', votes: 1 }
-    ]
-  },
-  {
-    id: uuidv4(),
-    title: 'Presupuesto de jardinería',
-    description: 'Aprobación de mantenimiento trimestral de zonas verdes',
-    status: 'cerrada',
-    closesAt: '2025-06-30',
-    createdBy: 'Administradora Demo',
-    options: [
-      { id: uuidv4(), label: 'A favor', votes: 22 },
-      { id: uuidv4(), label: 'En contra', votes: 4 }
-    ]
-  }
+const users = [
+  { email: 'admin@uniora.com', password: 'admin123', userType: 'admin', name: 'Administradora Demo' },
+  { email: 'propietario@uniora.com', password: 'owner123', userType: 'owner', name: 'Propietario Demo' },
+  { email: 'comite@uniora.com', password: 'committee123', userType: 'committee', name: 'Miembro Comité Demo' }
 ];
 
 let communityRequests = [];
@@ -148,53 +120,6 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-app.get('/api/users', (_req, res) => {
-  const sanitizedUsers = users.map(({ password, ...rest }) => rest);
-  res.json(sanitizedUsers);
-});
-
-app.post('/api/users', (req, res) => {
-  const { name, email, phone, userType, password } = req.body || {};
-  if (!name || !email || !userType || !password) {
-    return res.status(400).json({ message: 'Datos incompletos para crear el usuario' });
-  }
-
-  const exists = users.some((u) => u.email === email);
-  if (exists) {
-    return res.status(409).json({ message: 'Ya existe un usuario con ese correo' });
-  }
-
-  const newUser = {
-    id: uuidv4(),
-    name,
-    email,
-    phone: phone || '',
-    userType,
-    password,
-    status: 'activo'
-  };
-
-  users = [...users, newUser];
-  const { password: _, ...safeUser } = newUser;
-  res.status(201).json(safeUser);
-});
-
-app.patch('/api/users/:userId/status', (req, res) => {
-  const { userId } = req.params;
-  const { status } = req.body || {};
-
-  if (!['activo', 'inactivo'].includes(status)) {
-    return res.status(400).json({ message: 'Estado inválido' });
-  }
-
-  const userIndex = users.findIndex((u) => u.id === userId);
-  if (userIndex === -1) return res.status(404).json({ message: 'Usuario no encontrado' });
-
-  users[userIndex] = { ...users[userIndex], status };
-  const { password, ...safeUser } = users[userIndex];
-  res.json(safeUser);
-});
-
 app.post('/api/community', (req, res) => {
   const request = { id: uuidv4(), ...req.body, createdAt: new Date().toISOString() };
   communityRequests.push(request);
@@ -263,48 +188,6 @@ app.post('/api/finances', (req, res) => {
 
   finances = [newTransaction, ...finances];
   res.status(201).json(newTransaction);
-});
-
-app.get('/api/votations', (_req, res) => {
-  res.json(votations);
-});
-
-app.post('/api/votations', (req, res) => {
-  const { title, description, closesAt, options, createdBy } = req.body || {};
-
-  if (!title || !description || !closesAt || !options?.length) {
-    return res.status(400).json({ message: 'Datos incompletos para la votación' });
-  }
-
-  const formattedOptions = options.map((option) => ({ id: uuidv4(), label: option.label || option, votes: 0 }));
-
-  const newVotation = {
-    id: uuidv4(),
-    title,
-    description,
-    closesAt,
-    createdBy: createdBy || 'Comité',
-    status: 'abierta',
-    options: formattedOptions
-  };
-
-  votations = [newVotation, ...votations];
-  res.status(201).json(newVotation);
-});
-
-app.post('/api/votations/:votationId/vote', (req, res) => {
-  const { votationId } = req.params;
-  const { optionId } = req.body || {};
-
-  const votation = votations.find((v) => v.id === votationId);
-  if (!votation) return res.status(404).json({ message: 'Votación no encontrada' });
-  if (votation.status !== 'abierta') return res.status(400).json({ message: 'La votación está cerrada' });
-
-  const option = votation.options.find((o) => o.id === optionId);
-  if (!option) return res.status(404).json({ message: 'Opción no encontrada' });
-
-  option.votes += 1;
-  res.json(votation);
 });
 
 app.listen(PORT, () => {
