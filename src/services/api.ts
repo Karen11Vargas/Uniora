@@ -60,44 +60,13 @@ export interface Project {
   tasks: ProjectTask[];
 }
 
-export interface ManagedUser {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  userType: UserType;
-  status: 'activo' | 'inactivo';
-}
-
-export interface VotationOption {
-  id: string;
-  label: string;
-  votes: number;
-}
-
-export interface Votation {
-  id: string;
-  title: string;
-  description: string;
-  status: 'abierta' | 'cerrada';
-  closesAt: string;
-  createdBy: string;
-  options: VotationOption[];
-}
-
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  let response: Response;
-
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
-      ...options
-    });
-  } catch (error) {
-    throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté en ejecución.');
-  }
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
+    ...options
+  });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -108,7 +77,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
-const apiClient = {
+export const api = {
   login: (payload: LoginPayload) =>
     request<LoginResponse>('/auth/login', {
       method: 'POST',
@@ -140,41 +109,5 @@ const apiClient = {
   toggleTask: (projectId: string, taskId: string) =>
     request<Project>(`/projects/${projectId}/tasks/${taskId}`, {
       method: 'PATCH'
-    }),
-
-  // Usuarios
-  getUsers: () => request<ManagedUser[]>('/users'),
-
-  createUser: (payload: Omit<ManagedUser, 'id' | 'status'> & { password: string }) =>
-    request<ManagedUser>('/users', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }),
-
-  updateUserStatus: (userId: string, status: ManagedUser['status']) =>
-    request<ManagedUser>(`/users/${userId}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status })
-    }),
-
-  // Votaciones
-  getVotations: () => request<Votation[]>('/votations'),
-
-  createVotation: (payload: { title: string; description: string; closesAt: string; options: { label: string }[]; createdBy?: string }) =>
-    request<Votation>('/votations', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }),
-
-  submitVote: (votationId: string, optionId: string) =>
-    request<Votation>(`/votations/${votationId}/vote`, {
-      method: 'POST',
-      body: JSON.stringify({ optionId })
     })
 };
-
-export const api = apiClient;
-
-// Permite importar el cliente como default para compatibilidad con código previo
-export default api;
-
