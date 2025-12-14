@@ -5,23 +5,27 @@ import { CommunityRegistrationForm } from './components/CommunityRegistrationFor
 import { ProjectDashboard } from './components/ProjectDashboard';
 import { FinanceDashboard } from './components/FinanceDashboard';
 import { ProjectList } from './components/ProjectList';
+import { UserManagement } from './components/UserManagement';
+import { VotationCenter } from './components/VotationCenter';
+import { RequestCenter } from './components/RequestCenter';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Building2, LayoutDashboard, FolderKanban, DollarSign, Settings, LogOut, FileText, Vote, Users } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
+import { api, UserType } from './services/api';
 
-type UserType = 'admin' | 'owner' | 'committee' | null;
 type AppView = 'home' | 'login' | 'register-community' | 'dashboard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
-  const [userType, setUserType] = useState<UserType>(null);
+  const [userType, setUserType] = useState<UserType | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [notifications, setNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [language, setLanguage] = useState('es');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Aplicar tema
   useEffect(() => {
@@ -42,9 +46,17 @@ export default function App() {
     }
   }, [theme]);
 
-  const handleLogin = (type: UserType) => {
-    setUserType(type);
-    setCurrentView('dashboard');
+  const handleLogin = async ({ email, password, userType: selectedType }: { email: string; password: string; userType: UserType }) => {
+    try {
+      setIsAuthenticating(true);
+      const session = await api.login({ email, password, userType: selectedType });
+      setUserType(session.userType);
+      setCurrentView('dashboard');
+    } catch (error: any) {
+      alert(error.message || 'No se pudo iniciar sesión');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const handleLogout = () => {
@@ -72,6 +84,7 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
+        loading={isAuthenticating}
         onBack={() => setCurrentView('home')}
       />
     );
@@ -156,7 +169,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {userType === 'admin' && (
           <Tabs defaultValue="dashboard" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-2xl grid-cols-5">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4" />
                 <span>Panel</span>
@@ -168,6 +181,10 @@ export default function App() {
               <TabsTrigger value="projects" className="flex items-center gap-2">
                 <FolderKanban className="w-4 h-4" />
                 <span>Proyectos</span>
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span>Solicitudes</span>
               </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -187,12 +204,12 @@ export default function App() {
               <ProjectList />
             </TabsContent>
 
+            <TabsContent value="requests" className="space-y-6">
+              <RequestCenter />
+            </TabsContent>
+
             <TabsContent value="users" className="space-y-6">
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-gray-900 dark:text-gray-100 mb-2">Gestión de Usuarios</h3>
-                <p className="text-gray-500 dark:text-gray-400">Administra propietarios y miembros del comité</p>
-              </div>
+              <UserManagement />
             </TabsContent>
           </Tabs>
         )}
@@ -254,11 +271,7 @@ export default function App() {
             </TabsContent>
 
             <TabsContent value="votations" className="space-y-6">
-              <div className="text-center py-12">
-                <Vote className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-gray-900 dark:text-gray-100 mb-2">Gestión de Votaciones</h3>
-                <p className="text-gray-500 dark:text-gray-400">Crea y gestiona votaciones formales</p>
-              </div>
+              <VotationCenter />
             </TabsContent>
 
             <TabsContent value="communications" className="space-y-6">
